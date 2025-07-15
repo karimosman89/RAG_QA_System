@@ -36,94 +36,106 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
 ### 2.1. Core Microservices
 
 Based on the provided openapi specification and configuration, the primary microservices involved are:
-**RAGaaS Controller**: The central API gateway and orchestrator. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It interacts with other microservices to fulfill requests.
-**Ingestion Service**: Responsible for processing uploaded documents. This involves parsing the document, chunking its content, generating embeddings, and storing the processed data in a vector database and S3.
-**Inference Service:** Handles user queries. It retrieves relevant document chunks based on the query, feeds them to a Large Language Model (LLM), and returns the generated answer, potentially with source information.
-**Parser-as-a-Service (Parser-aaS)**: (Inferred from parser_url in config_controller.yml) A dedicated service for parsing various document types (PDF, DOCX, etc.) into a structured format that can be further processed by the Ingestion Service.
+
+- **RAGaaS Controller**: The central API gateway and orchestrator. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It interacts with other microservices to fulfill requests.
+  
+- **Ingestion Service**: Responsible for processing uploaded documents. This involves parsing the document, chunking its content, generating embeddings, and storing the processed data in a vector database and S3.
+  
+- **Inference Service:** Handles user queries. It retrieves relevant document chunks based on the query, feeds them to a Large Language Model (LLM), and returns the generated answer, potentially with source information.
+  
+- **Parser-as-a-Service (Parser-aaS)**: (Inferred from parser_url in config_controller.yml) A dedicated service for parsing various document types (PDF, DOCX, etc.) into a structured format that can be further processed by the Ingestion Service.
 
 ### 2.2. Supporting Components
 
-**Database (PostgreSQL)**: Stores metadata about applications, collections, documents, and their processing status.
-**S3 Storage**: Stores the raw uploaded documents and potentially processed chunks.
-**Message Broker (ActiveMQ/STOMP)**: Used for asynchronous communication between services, especially for ingestion jobs and status updates.
-**Benchmarking Module**: A component (likely part of the Controller or a separate utility) that automates testing of the RAG pipeline's performance.
+- **Database (PostgreSQL)**: Stores metadata about applications, collections, documents, and their processing status.
+- **S3 Storage**: Stores the raw uploaded documents and potentially processed chunks.
+- **Message Broker (ActiveMQ/STOMP)**: Used for asynchronous communication between services, especially for ingestion jobs and status updates.
+- **Benchmarking Module**: A component (likely part of the Controller or a separate utility) that automates testing of the RAG pipeline's performance.
 
 ### 2.3. Detailed Logic and Interactions
 
 #### 2.3.1. RAGaaS Controller (ragaas-controller)
 
-**Purpose**: Acts as the main entry point for external interactions. It manages the lifecycle of applications, collections, and documents, and routes inference requests.**Key Endpoints (from openapi)**: 
-***/v1/applications, /v2/applications***: Register new applications.
-***/v1/applications/{app_name}/collections, /v2/applications/{app_name}/collections***: Create, retrieve, and delete collections within an application.
-***/v1/applications/{app_name}/collections/{collection_name}/documents, /v2/applications/{app_name}/collections/{collection_name}/documents***: Ingest new documents, retrieve documents.
-***/v1/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer, /v2/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer***: Answer questions based on a specific document.
-***/v1/applications/{app_name}/collections/{collection_name}/answer, /v2/applications/{app_name}/collections/{collection_name}/answer***: Answer questions based on an entire collection.
-***/v1/benchmark/run, /v2/benchmark/run***: Trigger benchmark runs.
+**Purpose**: Acts as the main entry point for external interactions. It manages the lifecycle of applications, collections, and documents, and routes inference requests.
+
+**Key Endpoints (from openapi)**: 
+
+ - ***/v1/applications, /v2/applications***: Register new applications.
+ - ***/v1/applications/{app_name}/collections, /v2/applications/{app_name}/collections***: Create, retrieve, and delete collections within an application.
+ - ***/v1/applications/{app_name}/collections/{collection_name}/documents, /v2/applications/{app_name}/collections/{collection_name}/documents***: Ingest new documents, retrieve documents.
+ - ***/v1/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer,    /v2/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer***: Answer questions based on a specific document.
+ - ***/v1/applications/{app_name}/collections/{collection_name}/answer, /v2/applications/{app_name}/collections/{collection_name}/answer***: Answer questions based on an entire collection.
+ - ***/v1/benchmark/run, /v2/benchmark/run***: Trigger benchmark runs.
+   
 **Internal Logic**:
 
-1. Uses ApplicationHandler, CollectionHandler, and DocumentHandler to interact with the database for metadata management.
-2. For document ingestion, it receives the file and metadata, then likely sends a message to the Ingestion Service via the Message Broker or makes a direct API call.
-3. For inference, it forwards the user's question and context (application, collection, document ID) to the Inference Service.
-4. Handles error responses and validation.
+ 1. Uses ApplicationHandler, CollectionHandler, and DocumentHandler to interact with the database for metadata management.
+ 2. For document ingestion, it receives the file and metadata, then likely sends a message to the Ingestion Service via the Message Broker or makes a direct API   call.
+ 3. For inference, it forwards the user's question and context (application, collection, document ID) to the Inference Service.
+ 4. Handles error responses and validation.
 
 #### 2.3.2. Ingestion Service (ragaas-ingestion-v1)
 
 **Purpose:** Processes raw documents into a searchable format.
 **Flow:** 
-1. Receives a document (e.g., from the Controller via a message queue or direct API call).
-2. Sends the document to the Parser-as-a-Service to extract text and potentially structure.
-3. Chunks the extracted text into smaller, manageable pieces.
-4. Generates vector embeddings for each chunk using an embedding model.
-5. Stores the original document in S3 and the chunks/embeddings in a vector database (not explicitly defined but implied for RAG).
-6. Updates the document's learning status in the central database via the Controller or directly.
+ 1. Receives a document (e.g., from the Controller via a message queue or direct API call).
+ 2. Sends the document to the Parser-as-a-Service to extract text and potentially structure.
+ 3. Chunks the extracted text into smaller, manageable pieces.
+ 4. Generates vector embeddings for each chunk using an embedding model.
+ 5. Stores the original document in S3 and the chunks/embeddings in a vector database (not explicitly defined but implied for RAG).
+ 6. Updates the document's learning status in the central database via the Controller or directly.
 
 #### 2.3.3. Inference Service (ragaas-inference)
 **Purpose:** Generates answers to user questions using retrieved information.
 **Flow:** 
-1. Receives an InferenceRequest from the Controller (containing the question, chat history, filters, etc.).
-2. Performs a similarity search in the vector database to retrieve the most relevant document chunks based on the current_question and any filters.
-3. Constructs a prompt for the Large Language Model (LLM) by combining the current_question, chat_history, and the retrieved context_chunks.
-4. Sends the prompt to the LLM.
-5. Receives the llm_answer from the LLM.Returns the llm_answer and potentially the context_chunks (sources) back to the Controller.
+ 1. Receives an InferenceRequest from the Controller (containing the question, chat history, filters, etc.).
+ 2. Performs a similarity search in the vector database to retrieve the most relevant document chunks based on the current_question and any filters.
+ 3. Constructs a prompt for the Large Language Model (LLM) by combining the current_question, chat_history, and the retrieved context_chunks.
+ 4. Sends the prompt to the LLM.
+ 5. Receives the llm_answer from the LLM.Returns the llm_answer and potentially the context_chunks (sources) back to the Controller.
 
 #### 2.3.4. Benchmarking Module (benchmark.py, benchmarking.py)
 
 **Purpose:** Automates the process of evaluating the RAGaaS system's performance.
+
 **Components:** 
+
  1. BenchmarkJob class: Encapsulates the entire benchmarking workflow.
  2. run_benchmark_endpoint (in benchmarking.py): The API endpoint in the Controller that triggers the benchmark.
+    
  **Workflow (BenchmarkJob.run_benchmark()):**
  
- 1. **Setup Environment:** 
+  1. **Setup Environment:** 
 
- ***Registers a dedicated benchmark application and collection.***
- ***Crucially:Deletes any existing collection with the same name and its associated documents to ensure a clean slate for each run. This involves monitoring the deletion status of learning documents (JobStatus.IN_PROGRESS, FAILED) before proceeding.***
+    - Registers a dedicated benchmark application and collection.
+    - Crucially: Deletes any existing collection with the same name and its associated documents to ensure a clean slate for each run. This involves monitoring the deletion status of learning documents (JobStatus.IN_PROGRESS, FAILED) before proceeding.
 
  2. **Ingest Documents:** 
  
- ***Reads documents from a specified documents_path.***
- ***Calls the Controller's ingest_document_v2 endpoint for each document.***
- ***Keeps track of document_id to filename mapping.***
+   - ***Reads documents from a specified documents_path.***
+   - ***Calls the Controller's ingest_document_v2 endpoint for each document.***
+   - ***Keeps track of document_id to filename mapping.***
 
  3. **Monitor Ingestion:** 
  
- ***Continuously polls the Controller (or directly queries the database) for the learning_status of ingested documents.***
- ***Waits until all documents are processed (no IN_PROGRESS status).Handles FAILED documents, raising an error if any ingestion fails.***
- ***Includes a max_wait_minutes timeout to prevent infinite waiting.***
+    - ***Continuously polls the Controller (or directly queries the database) for the learning_status of ingested documents.***
+    - ***Waits until all documents are processed (no IN_PROGRESS status).Handles FAILED documents, raising an error if any ingestion fails.***
+    - ***Includes a max_wait_minutes timeout to prevent infinite waiting.***
 
  4. **Run Inference:**
  
- ***Reads a ground_truth_excel file, which contains predefined queries, expected answers, and source documents/pages.***
- ***For each query in the ground truth:***
-   1. Constructs an InferenceRequest.
-   2. Calls either answer_collection (for queries against the whole collection) or answer (for queries against a specific document) on the Controller.
-   3. Captures the LLM_Response, LLM_Context_Page, LLM_Context_Docs, and LLM_Context_Data from the inference response.
-   4. Logs any errors during inference for a specific query.
+    -***Reads a ground_truth_excel file, which contains predefined queries, expected answers, and source documents/pages.***
+     ***For each query in the ground truth:***
+    
+          1. Constructs an InferenceRequest.
+          2. Calls either answer_collection (for queries against the whole collection) or answer (for queries against a specific document) on the Controller.
+          3. Captures the LLM_Response, LLM_Context_Page, LLM_Context_Docs, and LLM_Context_Data from the inference response.
+          4. Logs any errors during inference for a specific query.
    
- 5. **Save Results:**
+ 6. **Save Results:**
  
- ***Compiles all query results into a Pandas DataFrame.***
- ***Saves the results to an Excel file (result_filename), which can then be returned by the run_benchmark_endpoint.***
+    - ***Compiles all query results into a Pandas DataFrame.***
+    - ***Saves the results to an Excel file (result_filename), which can then be returned by the run_benchmark_endpoint.***
  
  ### 2.4. Data Flow and Interactions
  
