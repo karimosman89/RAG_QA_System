@@ -77,31 +77,35 @@ Based on the provided openapi specification and configuration, the primary micro
 #### 2.3.2. Ingestion Service (ragaas-ingestion-v1)
 
 **Purpose:** Processes raw documents into a searchable format.
-**Flow:** 
- 1. Receives a document (e.g., from the Controller via a message queue or direct API call).
- 2. Sends the document to the Parser-as-a-Service to extract text and potentially structure.
- 3. Chunks the extracted text into smaller, manageable pieces.
- 4. Generates vector embeddings for each chunk using an embedding model.
- 5. Stores the original document in S3 and the chunks/embeddings in a vector database (not explicitly defined but implied for RAG).
- 6. Updates the document's learning status in the central database via the Controller or directly.
+
+   **Flow:** 
+      1. Receives a document (e.g., from the Controller via a message queue or direct API call).
+      2. Sends the document to the Parser-as-a-Service to extract text and potentially structure.
+      3. Chunks the extracted text into smaller, manageable pieces.
+      4. Generates vector embeddings for each chunk using an embedding model.
+      5. Stores the original document in S3 and the chunks/embeddings in a vector database (not explicitly defined but implied for RAG).
+      6. Updates the document's learning status in the central database via the Controller or directly.
 
 #### 2.3.3. Inference Service (ragaas-inference)
+
 **Purpose:** Generates answers to user questions using retrieved information.
-**Flow:** 
- 1. Receives an InferenceRequest from the Controller (containing the question, chat history, filters, etc.).
- 2. Performs a similarity search in the vector database to retrieve the most relevant document chunks based on the current_question and any filters.
- 3. Constructs a prompt for the Large Language Model (LLM) by combining the current_question, chat_history, and the retrieved context_chunks.
- 4. Sends the prompt to the LLM.
- 5. Receives the llm_answer from the LLM.Returns the llm_answer and potentially the context_chunks (sources) back to the Controller.
+
+   **Flow:** 
+   
+      1. Receives an InferenceRequest from the Controller (containing the question, chat history, filters, etc.).
+      2. Performs a similarity search in the vector database to retrieve the most relevant document chunks based on the current_question and any filters.
+      3. Constructs a prompt for the Large Language Model (LLM) by combining the current_question, chat_history, and the retrieved context_chunks.
+      4. Sends the prompt to the LLM.
+      5. Receives the llm_answer from the LLM.Returns the llm_answer and potentially the context_chunks (sources) back to the Controller.
 
 #### 2.3.4. Benchmarking Module (benchmark.py, benchmarking.py)
 
 **Purpose:** Automates the process of evaluating the RAGaaS system's performance.
 
-**Components:** 
+   **Components:** 
 
- 1. BenchmarkJob class: Encapsulates the entire benchmarking workflow.
- 2. run_benchmark_endpoint (in benchmarking.py): The API endpoint in the Controller that triggers the benchmark.
+    1. BenchmarkJob class: Encapsulates the entire benchmarking workflow.
+    2. run_benchmark_endpoint (in benchmarking.py): The API endpoint in the Controller that triggers the benchmark.
     
  **Workflow (BenchmarkJob.run_benchmark()):**
  
@@ -139,51 +143,49 @@ Based on the provided openapi specification and configuration, the primary micro
  
  ### 2.4. Data Flow and Interactions
  
- ```mermaid
+ 
  graph TD
-     User[User/Client Application] --> |API Calls (REST)| RAGaaSController[RAGaaS Controller]
+    User[User/Client Application] --> |API Calls (REST)| RAGaaSController[RAGaaS Controller]
 
-     subgraph RAGaaS Backend
-         RAGaaSController --> |DB Operations| Database[PostgreSQL Database]
-         RAGaaSController --> |Document Upload| S3[S3 Storage]
-         RAGaaSController --> |Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
-         RAGaaSController --> |Inference Request (API)| InferenceService[Inference Service]
-         RAGaaSController --> |Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
+    subgraph RAGaaS Backend
+        RAGaaSController --> |DB Operations| Database[PostgreSQL Database]
+        RAGaaSController --> |Document Upload| S3[S3 Storage]
+        RAGaaSController --> |Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
+        RAGaaSController --> |Inference Request (API)| InferenceService[Inference Service]
+        RAGaaSController --> |Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
 
-         IngestionService --> |Parse Request| ParserService[Parser-as-a-Service]
-         IngestionService --> |Store Chunks/Embeddings| VectorDB[Vector Database]
-         IngestionService --> |Store Raw Document| S3
+        IngestionService --> |Parse Request| ParserService[Parser-as-a-Service]
+        IngestionService --> |Store Chunks/Embeddings| VectorDB[Vector Database]
+        IngestionService --> |Store Raw Document| S3
 
-         InferenceService --> |Retrieve Chunks| VectorDB
-         InferenceService --> |Query LLM| LargeLanguageModel[Large Language Model (LLM)]
+        InferenceService --> |Retrieve Chunks| VectorDB
+        InferenceService --> |Query LLM| LargeLanguageModel[Large Language Model (LLM)]
 
-         BenchmarkingModule --> |Ingest Docs| IngestionService
-         BenchmarkingModule --> |Run Queries| InferenceService
-         BenchmarkingModule --> |DB Operations| Database
-         BenchmarkingModule --> |Generate Report| ExcelFile[Excel Report]
+        BenchmarkingModule --> |Ingest Docs| IngestionService
+        BenchmarkingModule --> |Run Queries| InferenceService
+        BenchmarkingModule --> |DB Operations| Database
+        BenchmarkingModule --> |Generate Report| ExcelFile[Excel Report]
+    end
 
-     end
+    Database -.-> |Metadata| IngestionService
+    Database -.-> |Metadata| InferenceService
+    S3 -.-> |Raw Docs| IngestionService
+    VectorDB -.-> |Embeddings/Chunks| InferenceService
+    LargeLanguageModel -.-> |Answers| InferenceService
+    BenchmarkingModule --> |Returns Excel| RAGaaSController
+    RAGaaSController --> User
 
-     Database -.-> |Metadata| IngestionService
-     Database -.-> |Metadata| InferenceService
-     S3 -.-> |Raw Docs| IngestionService
-     VectorDB -.-> |Embeddings/Chunks| InferenceService
-     LargeLanguageModel -.-> |Answers| InferenceService
-     BenchmarkingModule --> |Returns Excel| RAGaaSController
-     RAGaaSController --> User
+    style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
+    style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
+    style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
+    style ParserService fill:#ffb,stroke:#333,stroke-width:2px
+    style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
+    style Database fill:#ccf,stroke:#333,stroke-width:2px
+    style S3 fill:#cfc,stroke:#333,stroke-width:2px
+    style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
+    style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
+    style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
 
-     style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
-     style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
-     style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
-     style ParserService fill:#ffb,stroke:#333,stroke-width:2px
-     style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
-     style Database fill:#ccf,stroke:#333,stroke-width:2px
-     style S3 fill:#cfc,stroke:#333,stroke-width:2px
-     style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
-     style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
-     style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
-
-```
 
 
 ### 2.5. Configuration (config_controller.yml)
