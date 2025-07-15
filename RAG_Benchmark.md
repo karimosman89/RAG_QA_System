@@ -123,7 +123,8 @@ Based on the provided openapi specification and configuration, the primary micro
  3. **Monitor Ingestion:** 
  
     - ***Continuously polls the Controller (or directly queries the database) for the learning_status of ingested documents.***
-    - ***Waits until all documents are processed (no IN_PROGRESS status).Handles FAILED documents, raising an error if any ingestion fails.***
+    - ***Waits until all documents are processed (no IN_PROGRESS status).***
+    - ***Handles FAILED documents, raising an error if any ingestion fails.***
     - ***Includes a max_wait_minutes timeout to prevent infinite waiting.***
 
  4. **Run Inference:**
