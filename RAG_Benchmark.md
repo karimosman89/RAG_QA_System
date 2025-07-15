@@ -145,35 +145,35 @@ Based on the provided openapi specification and configuration, the primary micro
  
  ```mermaid
  graph TD
-     User[User/Client Application] -->|API Calls (REST)| RAGaaSController[RAGaaS Controller]
+     User[User/Client Application] --> RAGaaSController[RAGaaS Controller]
 
      subgraph RAGaaS_Backend
-         RAGaaSController -->|DB Operations| Database[PostgreSQL Database]
-         RAGaaSController -->|Document Upload| S3[S3 Storage]
-         RAGaaSController -->|Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
-         RAGaaSController -->|Inference Request (API)| InferenceService[Inference Service]
-         RAGaaSController -->|Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
+         RAGaaSController -->  Database[PostgreSQL Database]
+         RAGaaSController -->  S3[S3 Storage]
+         RAGaaSController -->  IngestionService[Ingestion Service]
+         RAGaaSController -->  InferenceService[Inference Service]
+         RAGaaSController -->  BenchmarkingModule[Benchmarking Module]
 
-         IngestionService -->|Parse Request| ParserService[Parser-as-a-Service]
-         IngestionService -->|Store Chunks/Embeddings| VectorDB[Vector Database]
-         IngestionService -->|Store Raw Document| S3
+         IngestionService -->  ParserService[Parser-as-a-Service]
+         IngestionService -->  VectorDB[Vector Database]
+         IngestionService -->  S3
 
-         InferenceService -->|Retrieve Chunks| VectorDB
-         InferenceService -->|Query LLM| LLM[Large Language Model]
+         InferenceService -->  VectorDB
+         InferenceService --> LLM[Large Language Model]
 
-         BenchmarkingModule -->|Ingest Docs| IngestionService
-         BenchmarkingModule -->|Run Queries| InferenceService
-         BenchmarkingModule -->|DB Ops| Database
-         BenchmarkingModule -->|Generate Report| ExcelFile[Excel Report]
+         BenchmarkingModule -->  IngestionService
+         BenchmarkingModule -->  InferenceService
+         BenchmarkingModule -->  Database
+         BenchmarkingModule -->  ExcelFile[Excel Report]
      end
 
-     Database -->|Metadata| IngestionService
-     Database -->|Metadata| InferenceService
-     S3 -->|Raw Docs| IngestionService
-     VectorDB -->|Embeddings| InferenceService
-     LLM -->|Answers| InferenceService
-     BenchmarkingModule -->|Returns Excel| RAGaaSController
-     RAGaaSController --> User
+     Database -->  IngestionService
+     Database -->  InferenceService
+     S3 -->  IngestionService
+     VectorDB -->  InferenceService
+     LLM -->  InferenceService
+     BenchmarkingModule -->  RAGaaSController
+     RAGaaSController -->  User
 ```
 
 
