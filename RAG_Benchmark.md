@@ -159,7 +159,7 @@ Based on the provided openapi specification and configuration, the primary micro
          IngestionService -->  S3
 
          InferenceService -->  VectorDB
-         InferenceService -->|Query LLM| LargeLanguageModel[Large Language Model (LLM)]
+         InferenceService --> LargeLanguageModel[Large Language Model (LLM)]
 
          BenchmarkingModule -->  IngestionService
          BenchmarkingModule -->  InferenceService
