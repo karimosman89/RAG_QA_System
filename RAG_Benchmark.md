@@ -190,17 +190,17 @@ Based on the provided openapi specification and configuration, the primary micro
 
 This YAML file defines the various configurations for the RAGaaS Controller and its interactions with other services. Key sections include:
 
-**api:** Defines the controller's service name, version, description, and routing.
-**message_broker:** Configuration for the ActiveMQ message broker (host, port, credentials, SSL).
-**app_queues:** Defines the names of various message queues used for inter-service communication (e.g., ingestion_v1_input_job_queue, job_result_queue, job_error_queue, job_cancellation_topic).
-**db:** Database connection details (username, password, hostname, port, database name, type).
-**inference_url:** The URL for the Inference Service.
-**ingestion_url:** The URL for the Ingestion Service.
-**parser_url:** The URL for the Parser-as-a-Service.
-**s3:** AWS S3 bucket configuration (name, region, base path).
-**benchmark:** Specific settings for the benchmarking module, including:
-  ***app_name, collection_name:*** Names for the benchmark application and collection.
-  ***documents_path:*** Path to the documents used for benchmarking.
-  ***ground_truth_excel:*** Path to the Excel file containing ground truth queries and answers.
-  ***poll_interval, max_wait_minutes:*** Parameters for monitoring ingestion status.
-  ***result_filename, log_filename, report_filename:*** Output file names for benchmark results and logs.This architecture provides a robust and scalable solution for building RAG-powered applications, separating concerns into distinct microservices for better maintainability, scalability, and fault tolerance.
+- **api:** Defines the controller's service name, version, description, and routing.
+- **message_broker:** Configuration for the ActiveMQ message broker (host, port, credentials, SSL).
+- **app_queues:** Defines the names of various message queues used for inter-service communication (e.g., ingestion_v1_input_job_queue, job_result_queue, job_error_queue, job_cancellation_topic).
+- **db:** Database connection details (username, password, hostname, port, database name, type).
+- **inference_url:** The URL for the Inference Service.
+- **ingestion_url:** The URL for the Ingestion Service.
+- **parser_url:** The URL for the Parser-as-a-Service.
+- **s3:** AWS S3 bucket configuration (name, region, base path).
+- **benchmark:** Specific settings for the benchmarking module, including:
+    -   ***app_name, collection_name:*** Names for the benchmark application and collection.
+    -   ***documents_path:*** Path to the documents used for benchmarking.
+    -   ***ground_truth_excel:*** Path to the Excel file containing ground truth queries and answers.
+    -   ***poll_interval, max_wait_minutes:*** Parameters for monitoring ingestion status.
+    -   ***result_filename, log_filename, report_filename:*** Output file names for benchmark results and logs.This architecture provides a robust and scalable solution for building RAG-powered applications, separating concerns into distinct microservices for better maintainability, scalability, and fault tolerance.
