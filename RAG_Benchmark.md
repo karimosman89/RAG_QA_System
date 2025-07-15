@@ -143,40 +143,37 @@ Based on the provided openapi specification and configuration, the primary micro
  
  ### 2.4. Data Flow and Interactions
  
- ```mermaid
  graph TD
-     User[User/Client Application] --> |API Calls (REST)| RAGaaSController[RAGaaS Controller]
+    User[User/Client Application] -->|API Calls (REST)| RAGaaSController[RAGaaS Controller]
 
-     subgraph RAGaaS Backend
-         RAGaaSController --> |DB Operations| Database[PostgreSQL Database]
-         RAGaaSController --> |Document Upload| S3[S3 Storage]
-         RAGaaSController --> |Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
-         RAGaaSController --> |Inference Request (API)| InferenceService[Inference Service]
-         RAGaaSController --> |Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
+    subgraph RAGaaS_Backend
+        RAGaaSController -->|DB Operations| Database[PostgreSQL Database]
+        RAGaaSController -->|Document Upload| S3[S3 Storage]
+        RAGaaSController -->|Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
+        RAGaaSController -->|Inference Request (API)| InferenceService[Inference Service]
+        RAGaaSController -->|Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
 
-         IngestionService --> |Parse Request| ParserService[Parser-as-a-Service]
-         IngestionService --> |Store Chunks/Embeddings| VectorDB[Vector Database]
-         IngestionService --> |Store Raw Document| S3
+        IngestionService -->|Parse Request| ParserService[Parser-as-a-Service]
+        IngestionService -->|Store Chunks/Embeddings| VectorDB[Vector Database]
+        IngestionService -->|Store Raw Document| S3
 
-         InferenceService --> |Retrieve Chunks| VectorDB
-         InferenceService --> |Query LLM| LargeLanguageModel[Large Language Model (LLM)]
+        InferenceService -->|Retrieve Chunks| VectorDB
+        InferenceService -->|Query LLM| LLM[Large Language Model]
 
-         BenchmarkingModule --> |Ingest Docs| IngestionService
-         BenchmarkingModule --> |Run Queries| InferenceService
-         BenchmarkingModule --> |DB Operations| Database
-         BenchmarkingModule --> |Generate Report| ExcelFile[Excel Report]
-     end
+        BenchmarkingModule -->|Ingest Docs| IngestionService
+        BenchmarkingModule -->|Run Queries| InferenceService
+        BenchmarkingModule -->|DB Ops| Database
+        BenchmarkingModule -->|Generate Report| ExcelFile[Excel Report]
+    end
 
-     Database --> |Metadata| IngestionService
-     Database --> |Metadata| InferenceService
-     S3 --> |Raw Docs| IngestionService
-     VectorDB --> |Embeddings/Chunks| InferenceService
-     LargeLanguageModel --> |Answers| InferenceService
-     BenchmarkingModule --> |Returns Excel| RAGaaSController
-     RAGaaSController --> User
+    Database -->|Metadata| IngestionService
+    Database -->|Metadata| InferenceService
+    S3 -->|Raw Docs| IngestionService
+    VectorDB -->|Embeddings| InferenceService
+    LLM -->|Answers| InferenceService
+    BenchmarkingModule -->|Returns Excel| RAGaaSController
+    RAGaaSController --> User
 
-
-```
 
 
 ### 2.5. Configuration (config_controller.yml)
