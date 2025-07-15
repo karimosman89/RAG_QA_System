@@ -143,49 +143,49 @@ Based on the provided openapi specification and configuration, the primary micro
  
  ### 2.4. Data Flow and Interactions
  
- 
+ ```mermaid
  graph TD
-    User[User/Client Application] --> |API Calls (REST)| RAGaaSController[RAGaaS Controller]
+     User[User/Client Application] --> |API Calls (REST)| RAGaaSController[RAGaaS Controller]
 
-    subgraph RAGaaS Backend
-        RAGaaSController --> |DB Operations| Database[PostgreSQL Database]
-        RAGaaSController --> |Document Upload| S3[S3 Storage]
-        RAGaaSController --> |Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
-        RAGaaSController --> |Inference Request (API)| InferenceService[Inference Service]
-        RAGaaSController --> |Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
+     subgraph RAGaaS Backend
+         RAGaaSController --> |DB Operations| Database[PostgreSQL Database]
+         RAGaaSController --> |Document Upload| S3[S3 Storage]
+         RAGaaSController --> |Ingestion Job (API/MQ)| IngestionService[Ingestion Service]
+         RAGaaSController --> |Inference Request (API)| InferenceService[Inference Service]
+         RAGaaSController --> |Benchmark Trigger| BenchmarkingModule[Benchmarking Module]
 
-        IngestionService --> |Parse Request| ParserService[Parser-as-a-Service]
-        IngestionService --> |Store Chunks/Embeddings| VectorDB[Vector Database]
-        IngestionService --> |Store Raw Document| S3
+         IngestionService --> |Parse Request| ParserService[Parser-as-a-Service]
+         IngestionService --> |Store Chunks/Embeddings| VectorDB[Vector Database]
+         IngestionService --> |Store Raw Document| S3
 
-        InferenceService --> |Retrieve Chunks| VectorDB
-        InferenceService --> |Query LLM| LargeLanguageModel[Large Language Model (LLM)]
+         InferenceService --> |Retrieve Chunks| VectorDB
+         InferenceService --> |Query LLM| LargeLanguageModel[Large Language Model (LLM)]
 
-        BenchmarkingModule --> |Ingest Docs| IngestionService
-        BenchmarkingModule --> |Run Queries| InferenceService
-        BenchmarkingModule --> |DB Operations| Database
-        BenchmarkingModule --> |Generate Report| ExcelFile[Excel Report]
-    end
+         BenchmarkingModule --> |Ingest Docs| IngestionService
+         BenchmarkingModule --> |Run Queries| InferenceService
+         BenchmarkingModule --> |DB Operations| Database
+         BenchmarkingModule --> |Generate Report| ExcelFile[Excel Report]
+     end
 
-    Database -.-> |Metadata| IngestionService
-    Database -.-> |Metadata| InferenceService
-    S3 -.-> |Raw Docs| IngestionService
-    VectorDB -.-> |Embeddings/Chunks| InferenceService
-    LargeLanguageModel -.-> |Answers| InferenceService
-    BenchmarkingModule --> |Returns Excel| RAGaaSController
-    RAGaaSController --> User
+     Database -.-> |Metadata| IngestionService
+     Database -.-> |Metadata| InferenceService
+     S3 -.-> |Raw Docs| IngestionService
+     VectorDB -.-> |Embeddings/Chunks| InferenceService
+     LargeLanguageModel -.-> |Answers| InferenceService
+     BenchmarkingModule --> |Returns Excel| RAGaaSController
+     RAGaaSController --> User
 
-    style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
-    style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
-    style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
-    style ParserService fill:#ffb,stroke:#333,stroke-width:2px
-    style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
-    style Database fill:#ccf,stroke:#333,stroke-width:2px
-    style S3 fill:#cfc,stroke:#333,stroke-width:2px
-    style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
-    style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
-    style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
-
+     style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
+     style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
+     style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
+     style ParserService fill:#ffb,stroke:#333,stroke-width:2px
+     style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
+     style Database fill:#ccf,stroke:#333,stroke-width:2px
+     style S3 fill:#cfc,stroke:#333,stroke-width:2px
+     style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
+     style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
+     style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
+```
 
 
 ### 2.5. Configuration (config_controller.yml)
