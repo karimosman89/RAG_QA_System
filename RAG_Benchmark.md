@@ -159,7 +159,7 @@ Based on the provided openapi specification and configuration, the primary micro
          IngestionService -->  S3
 
          InferenceService -->  VectorDB
-         InferenceService --> LLM[Large Language Model]
+         InferenceService -->|Query LLM| LargeLanguageModel[Large Language Model (LLM)]
 
          BenchmarkingModule -->  IngestionService
          BenchmarkingModule -->  InferenceService
@@ -174,6 +174,7 @@ Based on the provided openapi specification and configuration, the primary micro
      LLM -->  InferenceService
      BenchmarkingModule -->  RAGaaSController
      RAGaaSController -->  User
+
      style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
      style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
      style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
