@@ -174,6 +174,16 @@ Based on the provided openapi specification and configuration, the primary micro
      LLM -->  InferenceService
      BenchmarkingModule -->  RAGaaSController
      RAGaaSController -->  User
+     style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
+     style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
+     style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
+     style ParserService fill:#ffb,stroke:#333,stroke-width:2px
+     style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
+     style Database fill:#ccf,stroke:#333,stroke-width:2px
+     style S3 fill:#cfc,stroke:#333,stroke-width:2px
+     style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
+     style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
+     style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
 ```
 
 
