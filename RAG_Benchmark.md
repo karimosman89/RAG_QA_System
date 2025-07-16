@@ -44,13 +44,12 @@ graph TD
     Database -- Stores Metadata & Indices --> S3Storage
 ```
 
-## 2. Technical Details (For Developers)
+## 2. Core Microservices
 
 The RAGaaS platform is built as a set of interconnected microservices, each responsible for a specific part of the overall functionality.
 
-### 2.1. Core Microservices
 
-Based on the provided openapi specification and configuration, the primary microservices involved are:
+### 2.1. Component Explanation
 
 - **RAGaaS Controller**:
   This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It coordinates interactions with other microservices to fulfill user requests. The config_controller.yml file lists the routers for various functionalities handled by the controller, including applications, collections, documents, inference, and benchmarking.
