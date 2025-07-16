@@ -6,10 +6,10 @@ This document explains the architecture and logic of the RAG as a Service (RAGaa
 
 RAGaaS acts as a smart assistant that can answer your questions by looking up information within your own documents. Imagine having a vast library of documents (such as PDFs or DOCX files) and wanting to ask questions about their content. RAGaaS makes this possible by:
 
-- **Ingesting Documents**: You upload your documents to RAGaaS. The system processes them, understands their content, and stores them in a searchable format.
+- **Ingesting Documents**: You upload your documents to RAGaaS. The system processes them, understands their content, and stores them in a searchable format. RAGaaS supports different ingestion versions (V1 and V2), which  signify different processing pipelines.
 - **Organizing Information**: Documents are organized into **Applications** and **Collections**. An Application can be thought of as a project, while a Collection represents a specific set of documents within that project.
-- **Answering Questions**: When you ask a question, RAGaaS quickly finds the most relevant pieces of information from your documents and uses a powerful language model to generate a precise answer, along with the sources it used.
-- **Benchmarking**: RAGaaS also has a built-in tool to test how well it's performing, ensuring it consistently provides accurate and relevant answers.
+- **Answering Questions**: When you ask a question, RAGaaS quickly finds the most relevant information from your documents and uses a powerful language model to generate a precise answer, along with the sources it used.
+- **Benchmarking**: RAGaaS includes a built-in tool to evaluate its performance, ensuring consistent accuracy and relevance in its answers.
 
 ### Conceptual Flow:
 
@@ -52,173 +52,34 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
 
 Based on the provided openapi specification and configuration, the primary microservices involved are:
 
-- **RAGaaS Controller**: The central API gateway and orchestrator. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It interacts with other microservices to fulfill requests.
-  
-- **Ingestion Service**: Responsible for processing uploaded documents. This involves parsing the document, chunking its content, generating embeddings, and storing the processed data in a vector database and S3.
-  
-- **Inference Service:** Handles user queries. It retrieves relevant document chunks based on the query, feeds them to a Large Language Model (LLM), and returns the generated answer, potentially with source information.
-  
-- **Parser-as-a-Service (Parser-aaS)**: (Inferred from parser_url in config_controller.yml) A dedicated service for parsing various document types (PDF, DOCX, etc.) into a structured format that can be further processed by the Ingestion Service.
+- **RAGaaS Controller**: This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It coordinates interactions with other microservices to fulfill user requests. The config_controller.yml file lists the routers for various functionalities handled by the controller, including applications, collections, documents, inference, and benchmarking.
+        - **Applications Management:** Handled by the applications.py router, the controller allows for registering new applications in RAGaaS.
+        - **Collections Management:** Defined in collections.py, the controller enables operations such as getting, creating, and deleting collections associated         with a specific application.
+        - **Documents Management:** The documents.py router handles document ingestion, allowing users to upload new documents to a collection within an application. Notably, it defines separate API endpoints for v1 and v2 document ingestion, which determine which message queue the ingestion job is sent to.
+        - **Inference Handling:** The inference.py router manages answering user questions by proxying requests to the Inference Service.
+        - **Benchmarking:** The benchmarking.py router provides an endpoint to trigger the RAG benchmark script and return results, likely in an Excel file.        
+- **Ingestion Service**: This service is responsible for processing the documents uploaded to RAGaaS.
+     - When a document is uploaded via the RAGaaS Controller (e.g., through /v1/documents or /v2/documents endpoints defined in documents.py), the Controller    publishes an IngestionJob message to a specific **Message Queue**.
+     - The config_controller.yml file specifies distinct queues for each ingestion version: ingestion_v1_input_job_queue and ingestion_v2_input_job_queue. This allows for different ingestion pipelines (e.g., Ingestion Pipeline V1, Ingestion Pipeline V2) to consume jobs from their respective queues.
+     - These ingestion pipelines (defined in ingestion_pipeline.py and using ingestion_pipeline_components.py) process the raw documents. This processing typically involves:
+                    - **Downloading the document** from a temporary location (usually S3).
+                    - **Parsing** the document to extract text.
+                    - **Chunking** the text into smaller, manageable pieces.
+                    - **Generating embeddings** (numerical representations) for each chunk.
+                    - **Storing the raw and processed documents** (e.g., chunked text) in **S3 Storage**.
+                    - **Storing metadata and embeddings** (vector representations) in the **Database**.
+       
+- **Inference Service:** When a user asks a question, the Controller forwards the query to the Inference Service.
+     - This service first **retrieves relevant context chunks** (and their associated embeddings) from the **Database** based on the user's query.
+     - It might also retrieve additional raw document content from **S3 Storage** if needed for specific use cases (e.g., showing original snippets).
+     - The retrieved context chunks and the user's query are then fed to a **Large Language Model (LLM)**.
+     - The LLM generates an answer based on the provided context.
+     - The Inference Service then returns this answer, potentially along with the source context chunks, back to the RAGaaS Controller, which then sends it to the user. The inference_pipeline.py file defines the abstract interface for how this retrieval and generation process should occur.
+       
+- **Message Queues (MQ)**: These (e.g., ActiveMQ as suggested by config_controller.yml) act as intermediaries for asynchronous communication between services. This decoupling ensures that services can operate independently and reliably, even under heavy load. Specifically, they facilitate the hand-off of IngestionJob messages from the Controller to the Ingestion Service, allowing for parallel processing and robust error handling.
+- **Database & S3 Storage:** These components serve as the persistent storage layer for RAGaaS.
+     - The **Database** (PostgreSQL, configured in config_controller.yml) stores structured data such as application metadata, collection details, document metadata, document chunk embeddings, and job statuses. It's optimized for quick retrieval of specific document chunks based on queries.
+     - **S3 Storage**  is used for storing the actual raw document files and potentially processed versions of the documents ( parsed text, chunked data) that are too large or unstructured for the relational database.
 
-### 2.2. Supporting Components
+- **Benchmarking Service:** This component, as indicated by benchmark.py and benchmarking.py, is responsible for testing the performance of the RAGaaS system. It likely involves setting up benchmark environments, ingesting test documents, running queries against ground truth data, and generating reports to evaluate accuracy and efficiency. The benchmark.py file defines a BenchmarkJob class that handles the setup of the environment, document ingestion, and running of inference to evaluate the system.               
 
-- **Database (PostgreSQL)**: Stores metadata about applications, collections, documents, and their processing status.
-- **S3 Storage**: Stores the raw uploaded documents and potentially processed chunks.
-- **Message Broker (ActiveMQ/STOMP)**: Used for asynchronous communication between services, especially for ingestion jobs and status updates.
-- **Benchmarking Module**: A component (likely part of the Controller or a separate utility) that automates testing of the RAG pipeline's performance.
-
-### 2.3. Detailed Logic and Interactions
-
-#### 2.3.1. RAGaaS Controller (ragaas-controller)
-
-**Purpose**: Acts as the main entry point for external interactions. It manages the lifecycle of applications, collections, and documents, and routes inference requests.
-
-**Key Endpoints (from openapi)**: 
-
- - ***/v1/applications, /v2/applications***: Register new applications.
- - ***/v1/applications/{app_name}/collections, /v2/applications/{app_name}/collections***: Create, retrieve, and delete collections within an application.
- - ***/v1/applications/{app_name}/collections/{collection_name}/documents, /v2/applications/{app_name}/collections/{collection_name}/documents***: Ingest new documents, retrieve documents.
- - ***/v1/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer,    /v2/applications/{app_name}/collections/{collection_name}/documents/{document_id}/answer***: Answer questions based on a specific document.
- - ***/v1/applications/{app_name}/collections/{collection_name}/answer, /v2/applications/{app_name}/collections/{collection_name}/answer***: Answer questions based on an entire collection.
- - ***/v1/benchmark/run, /v2/benchmark/run***: Trigger benchmark runs.
-   
-**Internal Logic**:
-
- 1. Uses ApplicationHandler, CollectionHandler, and DocumentHandler to interact with the database for metadata management.
- 2. For document ingestion, it receives the file and metadata, then likely sends a message to the Ingestion Service via the Message Broker or makes a direct API   call.
- 3. For inference, it forwards the user's question and context (application, collection, document ID) to the Inference Service.
- 4. Handles error responses and validation.
-
-#### 2.3.2. Ingestion Service (ragaas-ingestion-v1)
-
-**Purpose:** Processes raw documents into a searchable format.
-
-   **Flow:** 
-      1. Receives a document (e.g., from the Controller via a message queue or direct API call).
-      2. Sends the document to the Parser-as-a-Service to extract text and potentially structure.
-      3. Chunks the extracted text into smaller, manageable pieces.
-      4. Generates vector embeddings for each chunk using an embedding model.
-      5. Stores the original document in S3 and the chunks/embeddings in a vector database (not explicitly defined but implied for RAG).
-      6. Updates the document's learning status in the central database via the Controller or directly.
-
-#### 2.3.3. Inference Service (ragaas-inference)
-
-**Purpose:** Generates answers to user questions using retrieved information.
-
-   **Flow:** 
-   
-      1. Receives an InferenceRequest from the Controller (containing the question, chat history, filters, etc.).
-      2. Performs a similarity search in the vector database to retrieve the most relevant document chunks based on the current_question and any filters.
-      3. Constructs a prompt for the Large Language Model (LLM) by combining the current_question, chat_history, and the retrieved context_chunks.
-      4. Sends the prompt to the LLM.
-      5. Receives the llm_answer from the LLM.Returns the llm_answer and potentially the context_chunks (sources) back to the Controller.
-
-#### 2.3.4. Benchmarking Module (benchmark.py, benchmarking.py)
-
-**Purpose:** Automates the process of evaluating the RAGaaS system's performance.
-
-   **Components:** 
-
-    1. BenchmarkJob class: Encapsulates the entire benchmarking workflow.
-    2. run_benchmark_endpoint (in benchmarking.py): The API endpoint in the Controller that triggers the benchmark.
-    
- **Workflow (BenchmarkJob.run_benchmark()):**
- 
-  1. **Setup Environment:** 
-
-    - Registers a dedicated benchmark application and collection.
-    - Crucially: Deletes any existing collection with the same name and its associated documents to ensure a clean slate for each run. This involves monitoring the deletion status of learning documents (JobStatus.IN_PROGRESS, FAILED) before proceeding.
-
- 2. **Ingest Documents:** 
- 
-   - ***Reads documents from a specified documents_path.***
-   - ***Calls the Controller's ingest_document_v2 endpoint for each document.***
-   - ***Keeps track of document_id to filename mapping.***
-
- 3. **Monitor Ingestion:** 
- 
-    - ***Continuously polls the Controller (or directly queries the database) for the learning_status of ingested documents.***
-    - ***Waits until all documents are processed (no IN_PROGRESS status).***
-    - ***Handles FAILED documents, raising an error if any ingestion fails.***
-    - ***Includes a max_wait_minutes timeout to prevent infinite waiting.***
-
- 4. **Run Inference:**
- 
-    -***Reads a ground_truth_excel file, which contains predefined queries, expected answers, and source documents/pages.***
-     ***For each query in the ground truth:***
-    
-          1. Constructs an InferenceRequest.
-          2. Calls either answer_collection (for queries against the whole collection) or answer (for queries against a specific document) on the Controller.
-          3. Captures the LLM_Response, LLM_Context_Page, LLM_Context_Docs, and LLM_Context_Data from the inference response.
-          4. Logs any errors during inference for a specific query.
-   
- 6. **Save Results:**
- 
-    - ***Compiles all query results into a Pandas DataFrame.***
-    - ***Saves the results to an Excel file (result_filename), which can then be returned by the run_benchmark_endpoint.***
- 
- ### 2.4. Data Flow and Interactions
- 
- ```mermaid
- graph TD
-     User[User/Client Application] --> RAGaaSController[RAGaaS Controller]
-
-     subgraph RAGaaS_Backend
-         RAGaaSController -->  Database[PostgreSQL Database]
-         RAGaaSController -->  S3[S3 Storage]
-         RAGaaSController -->  IngestionService[Ingestion Service]
-         RAGaaSController -->  InferenceService[Inference Service]
-         RAGaaSController -->  BenchmarkingModule[Benchmarking Module]
-
-         IngestionService -->  ParserService[Parser-as-a-Service]
-         IngestionService -->  VectorDB[Vector Database]
-         IngestionService -->  S3
-
-         InferenceService -->  VectorDB
-         InferenceService --> LLM[Large Language Model]
-
-         BenchmarkingModule -->  IngestionService
-         BenchmarkingModule -->  InferenceService
-         BenchmarkingModule -->  Database
-         BenchmarkingModule -->  ExcelFile[Excel Report]
-     end
-
-     Database -->  IngestionService
-     Database -->  InferenceService
-     S3 -->  IngestionService
-     VectorDB -->  InferenceService
-     LLM -->  InferenceService
-     BenchmarkingModule -->  RAGaaSController
-     RAGaaSController -->  User
-
-     style RAGaaSController fill:#f9f,stroke:#333,stroke-width:2px
-     style IngestionService fill:#bbf,stroke:#333,stroke-width:2px
-     style InferenceService fill:#bfb,stroke:#333,stroke-width:2px
-     style ParserService fill:#ffb,stroke:#333,stroke-width:2px
-     style BenchmarkingModule fill:#fbc,stroke:#333,stroke-width:2px
-     style Database fill:#ccf,stroke:#333,stroke-width:2px
-     style S3 fill:#cfc,stroke:#333,stroke-width:2px
-     style VectorDB fill:#fcf,stroke:#333,stroke-width:2px
-     style LargeLanguageModel fill:#cff,stroke:#333,stroke-width:2px
-     style ExcelFile fill:#eee,stroke:#333,stroke-width:1px
-```
-
-
-### 2.5. Configuration (config_controller.yml)
-
-This YAML file defines the various configurations for the RAGaaS Controller and its interactions with other services. Key sections include:
-
-- **api:** Defines the controller's service name, version, description, and routing.
-- **message_broker:** Configuration for the ActiveMQ message broker (host, port, credentials, SSL).
-- **app_queues:** Defines the names of various message queues used for inter-service communication (e.g., ingestion_v1_input_job_queue, job_result_queue, job_error_queue, job_cancellation_topic).
-- **db:** Database connection details (username, password, hostname, port, database name, type).
-- **inference_url:** The URL for the Inference Service.
-- **ingestion_url:** The URL for the Ingestion Service.
-- **parser_url:** The URL for the Parser-as-a-Service.
-- **s3:** AWS S3 bucket configuration (name, region, base path).
-- **benchmark:** Specific settings for the benchmarking module, including:
-    -   ***app_name, collection_name:*** Names for the benchmark application and collection.
-    -   ***documents_path:*** Path to the documents used for benchmarking.
-    -   ***ground_truth_excel:*** Path to the Excel file containing ground truth queries and answers.
-    -   ***poll_interval, max_wait_minutes:*** Parameters for monitoring ingestion status.
-    -   ***result_filename, log_filename, report_filename:*** Output file names for benchmark results and logs.This architecture provides a robust and scalable solution for building RAG-powered applications, separating concerns into distinct microservices for better maintainability, scalability, and fault tolerance.
