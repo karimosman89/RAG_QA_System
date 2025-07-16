@@ -4,10 +4,10 @@ This document explains the architecture and logic of the RAG as a Service (RAGaa
 
 ## 1. High-Level Overview (For Higher-Level Users)
 
-RAGaaS is like a smart assistant that can answer your questions by looking up information in your own documents. Imagine you have a vast library of documents (PDFs, DOCX, etc.), and you want to ask questions about their content. RAGaaS makes this possible by:
+RAGaaS acts as a smart assistant that can answer your questions by looking up information within your own documents. Imagine having a vast library of documents (such as PDFs or DOCX files) and wanting to ask questions about their content. RAGaaS makes this possible by:
 
-- **Ingesting Documents**: You upload your documents to RAGaaS. It processes them, understands their content, and stores them in a way that's easy to search.
-- **Organizing Information**: Documents are organized into **Applications** and **Collections**. Think of an Application as a project, and a Collection as a specific set of documents within that project.
+- **Ingesting Documents**: You upload your documents to RAGaaS. The system processes them, understands their content, and stores them in a searchable format.
+- **Organizing Information**: Documents are organized into **Applications** and **Collections**. An Application can be thought of as a project, while a Collection represents a specific set of documents within that project.
 - **Answering Questions**: When you ask a question, RAGaaS quickly finds the most relevant pieces of information from your documents and uses a powerful language model to generate a precise answer, along with the sources it used.
 - **Benchmarking**: RAGaaS also has a built-in tool to test how well it's performing, ensuring it consistently provides accurate and relevant answers.
 
