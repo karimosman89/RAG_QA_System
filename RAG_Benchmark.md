@@ -61,18 +61,15 @@ Based on the provided openapi specification and configuration, the primary micro
    - **Inference Handling:** The inference.py router manages answering user questions by proxying requests to the Inference Service.
    - **Benchmarking:** The benchmarking.py router provides an endpoint to trigger the RAG benchmark script and return results, likely in an Excel file.        
 - **Ingestion Service**: This service is responsible for processing the documents uploaded to RAGaaS.
-  
-       - When a document is uploaded via the RAGaaS Controller (e.g., through /v1/documents or /v2/documents endpoints defined in documents.py), the Controller    publishes an IngestionJob message to a specific **Message Queue**.
-  
-     - The config_controller.yml file specifies distinct queues for each ingestion version: ingestion_v1_input_job_queue and ingestion_v2_input_job_queue. This allows for different ingestion pipelines (e.g., Ingestion Pipeline V1, Ingestion Pipeline V2) to consume jobs from their respective queues.
-       
-     - These ingestion pipelines (defined in ingestion_pipeline.py and using ingestion_pipeline_components.py) process the raw documents. This processing typically involves:
-                    - **Downloading the document** from a temporary location (usually S3).
-                    - **Parsing** the document to extract text.
-                    - **Chunking** the text into smaller, manageable pieces.
-                    - **Generating embeddings** (numerical representations) for each chunk.
-                    - **Storing the raw and processed documents** (e.g., chunked text) in **S3 Storage**.
-                    - **Storing metadata and embeddings** (vector representations) in the **Database**.
+     - When a document is uploaded via the RAGaaS Controller ( through /v1/documents or /v2/documents endpoints defined in documents.py), the Controller    publishes an IngestionJob message to a specific **Message Queue**.
+     - The config_controller.yml file specifies distinct queues for each ingestion version: ingestion_v1_input_job_queue and ingestion_v2_input_job_queue. This allows for different ingestion pipelines (e.g., Ingestion Pipeline V1, Ingestion Pipeline V2) to consume jobs from their respective queues.  
+     - These ingestion pipelines (defined in ingestion_pipeline.py and using ingestion_pipeline_components.py) process the raw documents. This processing typically       involves:
+              - **Downloading the document** from a temporary location (usually S3).
+              - **Parsing** the document to extract text.
+              - **Chunking** the text into smaller, manageable pieces.
+              - **Generating embeddings** (numerical representations) for each chunk.
+              - **Storing the raw and processed documents** (e.g., chunked text) in **S3 Storage**.
+              - **Storing metadata and embeddings** (vector representations) in the **Database**.
        
 - **Inference Service:** When a user asks a question, the Controller forwards the query to the Inference Service.
      - This service first **retrieves relevant context chunks** (and their associated embeddings) from the **Database** based on the user's query.
