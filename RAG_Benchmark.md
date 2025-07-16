@@ -52,15 +52,20 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
 
 Based on the provided openapi specification and configuration, the primary microservices involved are:
 
-- **RAGaaS Controller**: This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It coordinates interactions with other microservices to fulfill user requests. The config_controller.yml file lists the routers for various functionalities handled by the controller, including applications, collections, documents, inference, and benchmarking.
-        - **Applications Management:** Handled by the applications.py router, the controller allows for registering new applications in RAGaaS.
-        - **Collections Management:** Defined in collections.py, the controller enables operations such as getting, creating, and deleting collections associated         with a specific application.
-        - **Documents Management:** The documents.py router handles document ingestion, allowing users to upload new documents to a collection within an application. Notably, it defines separate API endpoints for v1 and v2 document ingestion, which determine which message queue the ingestion job is sent to.
-        - **Inference Handling:** The inference.py router manages answering user questions by proxying requests to the Inference Service.
-        - **Benchmarking:** The benchmarking.py router provides an endpoint to trigger the RAG benchmark script and return results, likely in an Excel file.        
+- **RAGaaS Controller**:
+  This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It coordinates interactions with other microservices to fulfill user requests. The config_controller.yml file lists the routers for various functionalities handled by the controller, including applications, collections, documents, inference, and benchmarking.
+  
+   - **Applications Management:** Handled by the applications.py router, the controller allows for registering new applications in RAGaaS.
+   - **Collections Management:** Defined in collections.py, the controller enables operations such as getting, creating, and deleting collections associated         with a specific application.
+   - **Documents Management:** The documents.py router handles document ingestion, allowing users to upload new documents to a collection within an application. Notably, it defines separate API endpoints for v1 and v2 document ingestion, which determine which message queue the ingestion job is sent to.
+   - **Inference Handling:** The inference.py router manages answering user questions by proxying requests to the Inference Service.
+   - **Benchmarking:** The benchmarking.py router provides an endpoint to trigger the RAG benchmark script and return results, likely in an Excel file.        
 - **Ingestion Service**: This service is responsible for processing the documents uploaded to RAGaaS.
-     - When a document is uploaded via the RAGaaS Controller (e.g., through /v1/documents or /v2/documents endpoints defined in documents.py), the Controller    publishes an IngestionJob message to a specific **Message Queue**.
+  
+       - When a document is uploaded via the RAGaaS Controller (e.g., through /v1/documents or /v2/documents endpoints defined in documents.py), the Controller    publishes an IngestionJob message to a specific **Message Queue**.
+  
      - The config_controller.yml file specifies distinct queues for each ingestion version: ingestion_v1_input_job_queue and ingestion_v2_input_job_queue. This allows for different ingestion pipelines (e.g., Ingestion Pipeline V1, Ingestion Pipeline V2) to consume jobs from their respective queues.
+       
      - These ingestion pipelines (defined in ingestion_pipeline.py and using ingestion_pipeline_components.py) process the raw documents. This processing typically involves:
                     - **Downloading the document** from a temporary location (usually S3).
                     - **Parsing** the document to extract text.
