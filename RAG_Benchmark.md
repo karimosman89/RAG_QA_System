@@ -26,7 +26,7 @@ graph TD
         RagaasController -- Sends Documents for Processing --> IngestionService[Document Ingestion Team]
         IngestionService -- Sends Docs for Text Extraction --> ParserService[Parser as a Service]
         ParserService -- Returns Extracted Text --> IngestionService
-        IngestionService -- Processes & Organizes (using AI Models for Embeddings) --> DataStorage[Document Library & Index (Database & Cloud Storage)]
+        IngestionService -- Processes & Organizes (using AI Models for Embeddings) --> DataStorage[Document Library &amp; Index (Database &amp; Cloud Storage)]
     end
 
     subgraph "Answering Questions (Inference)"
