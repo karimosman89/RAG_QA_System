@@ -96,7 +96,7 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
 
 - **Benchmarking Service:**
   Now implemented as a controller endpoint:
-      - Accessible directly through RAGaaS API.
-      - Tests system performance using predefined metrics.
-      - Generates evaluation reports for accuracy and efficiency.                
+    - Accessible directly through RAGaaS API.
+    - Tests system performance using predefined metrics.
+    - Generates evaluation reports for accuracy and efficiency.                
 
