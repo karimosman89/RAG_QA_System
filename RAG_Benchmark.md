@@ -94,7 +94,8 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
      - The **Database** Stores structured data including application metadata, collection details, document metadata, and embeddings.
      - **S3 Storage**  is used for storing the actual raw document files and potentially processed versions of the documents ( parsed text, chunked data) that are too large or unstructured for the relational database.
 
-- **Benchmarking Service:** Now implemented as a controller endpoint:
+- **Benchmarking Service:**
+  Now implemented as a controller endpoint:
       - Accessible directly through RAGaaS API.
       - Tests system performance using predefined metrics.
       - Generates evaluation reports for accuracy and efficiency.                
