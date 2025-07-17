@@ -60,7 +60,7 @@ The RAGaaS platform is built as a set of interconnected microservices, each resp
 ### 2.1. Component Explanation
 
 - **RAGaaS Controller**:
-  This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, and handling inference requests. It coordinates interactions with other microservices to fulfill user requests. The config_controller.yml file lists the routers for various functionalities handled by the controller, including applications, collections, documents, inference, and benchmarking.
+  This is the central API gateway and orchestrator of the RAGaaS platform. It exposes endpoints for managing applications, collections, documents, handling inference requests, and benchmarking. It coordinates interactions with other microservices to fulfill user requests.
   
    - **Applications Management:** Allows registering new applications in RAGaaS.
    - **Collections Management:** Enables operations such as getting, creating, and deleting collections associated with a specific application.
