@@ -15,32 +15,33 @@ RAGaaS acts as a smart assistant that can answer your questions by looking up in
 
 ```mermaid
 graph TD
-    User[Your Team/User] -- Asks Questions & Uploads Docs --> RagaasController[RAGaaS Central Hub]
+    User[User] -- UI/API Requests --> RagaasController[RAGaaS Controller]
 
-    subgraph RAGaaS Central Hub
-        RagaasController -- Manages Apps/Collections/Docs --> InternalAPI[Internal API Endpoints]
-        InternalAPI -- Triggers --> BenchmarkingEndpoint[Benchmarking Endpoint]
+    subgraph Ingestion Process
+        RagaasController -- Document Upload (v1/v2 API) --> IngestionService[Ingestion Service]
+        IngestionService -- Publishes IngestionJob --> MQ_V1[Message Queue: ingestion_v1_input_job_queue]
+        IngestionService -- Publishes IngestionJob --> MQ_V2[Message Queue: ingestion_v2_input_job_queue]
+        MQ_V1 -- Consumed by --> IngestionPipelineV1[Ingestion Pipeline V1]
+        MQ_V2 -- Consumed by --> IngestionPipelineV2[Ingestion Pipeline V2]
+        IngestionPipelineV1 -- Processes & Embeds --> S3Storage[S3 Storage for Raw & Processed Documents]
+        IngestionPipelineV2 -- Processes & Embeds --> S3Storage
+        IngestionPipelineV1 -- Stores Metadata & Embeddings --> Database[Database]
+        IngestionPipelineV2 -- Stores Metadata & Embeddings --> Database
     end
 
-    subgraph Learning from Documents (Ingestion)
-        RagaasController -- Sends Documents for Processing --> IngestionService[Document Ingestion Team]
-        IngestionService -- Sends Docs for Text Extraction --> ParserService[Parser as a Service]
-        ParserService -- Returns Extracted Text --> IngestionService
-        IngestionService -- Processes & Organizes (using AI Models for Embeddings) --> DataStorage[Document Library & Index (Database & Cloud Storage)]
+    subgraph Inference Process
+        RagaasController -- User Query (API) --> InferenceService[Inference Service]
+        InferenceService -- Retrieves Context --> Database
+        InferenceService -- Retrieves Raw Content (if needed) --> S3Storage
+        InferenceService -- Feeds Context & Query --> LLM[Large Language Model]
+        LLM -- Generates Answer --> InferenceService
+        InferenceService -- Returns Answer --> RagaasController
     end
 
-    subgraph Answering Questions (Inference)
-        RagaasController -- Sends Your Question --> InferenceService[Answer Generation Team]
-        InferenceService -- Retrieves Initial Relevant Info --> DataStorage
-        InferenceService -- Refines Relevance --> CrossEncoderService[Cross Encoder as a Service]
-        CrossEncoderService -- Returns Reranked Info --> InferenceService
-        InferenceService -- Asks the LLM for an Answer --> LLM[Large Language Model - The AI Brain]
-        LLM -- Provides Answer --> InferenceService
-        InferenceService -- Sends Answer Back --> RagaasController
-    end
-
-    RagaasController -- Delivers Answers --> User
-    BenchmarkingEndpoint -- Reports on Performance --> User
+    RagaasController -- Returns Answer/Status --> User
+    RagaasController -- Triggers Benchmark --> BenchmarkingService[Benchmarking Service]
+    BenchmarkingService -- Tests & Reports --> User
+    Database -- Stores Metadata & Indices --> S3Storage
 ```
 
 ## 2. Core Microservices
