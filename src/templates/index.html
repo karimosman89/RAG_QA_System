@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - AI-Powered Development Environment</title>
+    <meta name="description" content="Modern AI-assisted coding environment with real-time collaboration and multi-provider AI support">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Monaco Editor -->
+    <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .editor-container {
+            height: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .ai-assistant {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .typing-indicator {
+            display: none;
+        }
+        
+        .typing-indicator.active {
+            display: inline-block;
+        }
+        
+        .typing-indicator::after {
+            content: '...';
+            animation: typing 1.5s infinite;
+        }
+        
+        @keyframes typing {
+            0%, 33% { content: '.'; }
+            34%, 66% { content: '..'; }
+            67%, 100% { content: '...'; }
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+        }
+        
+        .connection-status.connected {
+            background-color: #10b981;
+        }
+        
+        .connection-status.disconnected {
+            background-color: #ef4444;
+        }
+        
+        .connection-status.connecting {
+            background-color: #f59e0b;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            max-width: 300px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background-color: #10b981;
+        }
+        
+        .toast.error {
+            background-color: #ef4444;
+        }
+        
+        .toast.warning {
+            background-color: #f59e0b;
+        }
+        
+        .toast.info {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status disconnected">
+        <i class="fas fa-circle mr-2"></i>
+        <span id="connectionText">Disconnected</span>
+    </div>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">{{ app_name }}</h1>
+                    <p class="text-blue-100 mt-2">Enterprise AI-Powered Development Environment</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-sm text-blue-100">Version {{ version }}</div>
+                        <div id="aiProviderStatus" class="text-xs text-blue-200">
+                            <i class="fas fa-robot mr-1"></i>
+                            <span>Checking AI providers...</span>
+                        </div>
+                    </div>
+                    <button id="loginBtn" class="glass-morphism px-4 py-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-200">
+                        <i class="fas fa-user mr-2"></i>Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- AI Assistant Panel -->
+        <div class="mb-8">
+            <div class="ai-assistant rounded-lg p-6 text-white">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold">
+                        <i class="fas fa-robot mr-2"></i>AI Assistant
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button id="clearChatBtn" class="glass-morphism px-3 py-1 rounded text-sm hover:bg-white hover:bg-opacity-20 transition duration-200">
+                            <i class="fas fa-trash mr-1"></i>Clear
+                        </button>
+                        <select id="languageSelect" class="glass-morphism px-3 py-1 rounded text-sm bg-transparent border-0">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="java">Java</option>
+                            <option value="cpp">C++</option>
+                            <option value="go">Go</option>
+                            <option value="rust">Rust</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <textarea 
+                        id="aiPrompt" 
+                        placeholder="Describe what you want to code, ask for help, or request code analysis..."
+                        class="w-full h-20 bg-transparent border-0 text-white placeholder-blue-100 resize-none focus:outline-none"
+                    ></textarea>
+                    
+                    <div class="flex justify-between items-center mt-4">
+                        <div class="flex space-x-2">
+                            <button id="generateBtn" class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
+                                <i class="fas fa-magic mr-2"></i>Generate Code
+                            </button>
+                            <button id="analyzeBtn" class="glass-morphism px-4 py-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-200">
+                                <i class="fas fa-search mr-2"></i>Analyze Code
+                            </button>
+                            <button id="completeBtn" class="glass-morphism px-4 py-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-200">
+                                <i class="fas fa-code mr-2"></i>Complete Code
+                            </button>
+                        </div>
+                        <div class="typing-indicator text-blue-100">
+                            AI is thinking
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Editor Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Editor -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gray-800 text-white px-4 py-3 flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            <h3 class="font-semibold">
+                                <i class="fas fa-code mr-2"></i>Code Editor
+                            </h3>
+                            <div class="flex space-x-2">
+                                <button id="newFileBtn" class="text-gray-300 hover:text-white transition duration-200" title="New File">
+                                    <i class="fas fa-file-plus"></i>
+                                </button>
+                                <button id="saveFileBtn" class="text-gray-300 hover:text-white transition duration-200" title="Save File">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                                <button id="downloadBtn" class="text-gray-300 hover:text-white transition duration-200" title="Download File">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span id="cursorPosition" class="text-xs text-gray-400">1:1</span>
+                            <div id="collaborators" class="flex -space-x-2">
+                                <!-- Collaborator avatars will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div id="editor" class="editor-container"></div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button id="formatBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                        <i class="fas fa-indent mr-2"></i>Format Code
+                    </button>
+                    <button id="refactorBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200">
+                        <i class="fas fa-cogs mr-2"></i>Refactor
+                    </button>
+                    <button id="documentBtn" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition duration-200">
+                        <i class="fas fa-book mr-2"></i>Generate Docs
+                    </button>
+                    <button id="testBtn" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition duration-200">
+                        <i class="fas fa-vial mr-2"></i>Generate Tests
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- AI Response -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gray-800 text-white px-4 py-3">
+                        <h3 class="font-semibold">
+                            <i class="fas fa-brain mr-2"></i>AI Response
+                        </h3>
+                    </div>
+                    <div id="aiResponse" class="p-4 h-64 overflow-y-auto bg-gray-50">
+                        <div class="text-gray-500 text-center py-8">
+                            <i class="fas fa-robot text-4xl mb-4"></i>
+                            <p>AI responses will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code Analysis -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gray-800 text-white px-4 py-3">
+                        <h3 class="font-semibold">
+                            <i class="fas fa-search mr-2"></i>Code Analysis
+                        </h3>
+                    </div>
+                    <div id="codeAnalysis" class="p-4 h-48 overflow-y-auto">
+                        <div class="text-gray-500 text-center py-4">
+                            <i class="fas fa-chart-line text-3xl mb-2"></i>
+                            <p class="text-sm">Analysis results will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Collaboration -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gray-800 text-white px-4 py-3 flex justify-between items-center">
+                        <h3 class="font-semibold">
+                            <i class="fas fa-users mr-2"></i>Collaboration
+                        </h3>
+                        <button id="shareBtn" class="text-xs bg-blue-500 px-2 py-1 rounded hover:bg-blue-600 transition duration-200">
+                            Share
+                        </button>
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-4">
+                            <input 
+                                id="roomInput" 
+                                type="text" 
+                                placeholder="Enter room ID or generate new"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                            <div class="flex mt-2 space-x-2">
+                                <button id="joinRoomBtn" class="flex-1 bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600 transition duration-200">
+                                    Join Room
+                                </button>
+                                <button id="generateRoomBtn" class="flex-1 bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition duration-200">
+                                    New Room
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="collaborationStatus" class="text-sm text-gray-500">
+                            Not in a collaboration room
+                        </div>
+                        
+                        <div id="activeUsers" class="mt-3 space-y-2">
+                            <!-- Active users will be shown here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <section class="mt-16">
+            <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Powerful AI-Driven Features</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="feature-card bg-white rounded-lg shadow-lg p-6 transition duration-300">
+                    <div class="text-blue-500 text-3xl mb-4">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Code Generation</h3>
+                    <p class="text-gray-600">Generate high-quality code from natural language descriptions using advanced AI models.</p>
+                </div>
+                
+                <div class="feature-card bg-white rounded-lg shadow-lg p-6 transition duration-300">
+                    <div class="text-green-500 text-3xl mb-4">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Smart Analysis</h3>
+                    <p class="text-gray-600">Intelligent code analysis for bugs, performance issues, and security vulnerabilities.</p>
+                </div>
+                
+                <div class="feature-card bg-white rounded-lg shadow-lg p-6 transition duration-300">
+                    <div class="text-purple-500 text-3xl mb-4">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Real-time Collaboration</h3>
+                    <p class="text-gray-600">Collaborate with team members in real-time with live code sharing and AI assistance.</p>
+                </div>
+                
+                <div class="feature-card bg-white rounded-lg shadow-lg p-6 transition duration-300">
+                    <div class="text-red-500 text-3xl mb-4">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Multi-AI Support</h3>
+                    <p class="text-gray-600">Leverage multiple AI providers (OpenAI, Claude, Gemini) with intelligent fallback.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Global variables
+        let editor = null;
+        let websocket = null;
+        let currentRoom = null;
+        let currentLanguage = 'python';
+        let clientId = generateClientId();
+        
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEditor();
+            initializeWebSocket();
+            initializeEventListeners();
+            checkAIProviders();
+        });
+        
+        // Generate unique client ID
+        function generateClientId() {
+            return 'client_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        // Initialize Monaco Editor
+        function initializeEditor() {
+            require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.44.0/min/vs' } });
+            require(['vs/editor/editor.main'], function () {
+                editor = monaco.editor.create(document.getElementById('editor'), {
+                    value: `# Welcome to AI-Assisted Coding Environment
+# Start coding or ask the AI assistant for help!
+
+def hello_world():
+    """A simple hello world function."""
+    print("Hello, World!")
+    return "Hello, World!"
+
+if __name__ == "__main__":
+    hello_world()`,
+                    language: currentLanguage,
+                    theme: 'vs-dark',
+                    fontSize: 14,
+                    automaticLayout: true,
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    lineNumbers: 'on',
+                    renderWhitespace: 'selection',
+                    cursorBlinking: 'smooth',
+                    suggestOnTriggerCharacters: true,
+                });
+                
+                // Update cursor position
+                editor.onDidChangeCursorPosition(function(e) {
+                    document.getElementById('cursorPosition').textContent = 
+                        e.position.lineNumber + ':' + e.position.column;
+                    
+                    // Send cursor position to collaborators
+                    if (websocket && currentRoom) {
+                        sendWebSocketMessage('cursor_position', {
+                            room_id: currentRoom,
+                            position: e.position,
+                            selection: editor.getSelection()
+                        });
+                    }
+                });
+                
+                // Handle content changes for collaboration
+                editor.onDidChangeModelContent(function(e) {
+                    if (websocket && currentRoom) {
+                        sendWebSocketMessage('code_change', {
+                            room_id: currentRoom,
+                            changes: e.changes,
+                            timestamp: Date.now()
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Initialize WebSocket connection
+        function initializeWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/coding/${clientId}`;
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                updateConnectionStatus('connected');
+                showToast('Connected to AI Assistant', 'success');
+            };
+            
+            websocket.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+            
+            websocket.onclose = function() {
+                updateConnectionStatus('disconnected');
+                showToast('Disconnected from AI Assistant', 'error');
+                
+                // Attempt to reconnect
+                setTimeout(() => {
+                    initializeWebSocket();
+                }, 3000);
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('disconnected');
+                showToast('Connection error occurred', 'error');
+            };
+        }
+        
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            const { type, data } = message;
+            
+            switch (type) {
+                case 'ai_completion_result':
+                    handleAICompletionResult(data);
+                    break;
+                case 'ai_analysis_result':
+                    handleAIAnalysisResult(data);
+                    break;
+                case 'ai_processing':
+                    showTypingIndicator(true);
+                    break;
+                case 'error':
+                    showToast(data.message, 'error');
+                    showTypingIndicator(false);
+                    break;
+                case 'code_update':
+                    handleCodeUpdate(data);
+                    break;
+                case 'cursor_update':
+                    handleCursorUpdate(data);
+                    break;
+                case 'user_joined':
+                    handleUserJoined(data);
+                    break;
+                case 'user_left':
+                    handleUserLeft(data);
+                    break;
+                case 'room_joined':
+                    handleRoomJoined(data);
+                    break;
+            }
+        }
+        
+        // Send WebSocket message
+        function sendWebSocketMessage(type, data) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type, data }));
+            }
+        }
+        
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Language selection
+            document.getElementById('languageSelect').addEventListener('change', function(e) {
+                currentLanguage = e.target.value;
+                if (editor) {
+                    monaco.editor.setModelLanguage(editor.getModel(), currentLanguage);
+                }
+            });
+            
+            // AI buttons
+            document.getElementById('generateBtn').addEventListener('click', generateCode);
+            document.getElementById('analyzeBtn').addEventListener('click', analyzeCode);
+            document.getElementById('completeBtn').addEventListener('click', completeCode);
+            document.getElementById('clearChatBtn').addEventListener('click', clearAIResponse);
+            
+            // Code action buttons
+            document.getElementById('formatBtn').addEventListener('click', formatCode);
+            document.getElementById('refactorBtn').addEventListener('click', refactorCode);
+            document.getElementById('documentBtn').addEventListener('click', generateDocumentation);
+            document.getElementById('testBtn').addEventListener('click', generateTests);
+            
+            // File operations
+            document.getElementById('newFileBtn').addEventListener('click', newFile);
+            document.getElementById('saveFileBtn').addEventListener('click', saveFile);
+            document.getElementById('downloadBtn').addEventListener('click', downloadFile);
+            
+            // Collaboration
+            document.getElementById('joinRoomBtn').addEventListener('click', joinRoom);
+            document.getElementById('generateRoomBtn').addEventListener('click', generateRoom);
+            document.getElementById('shareBtn').addEventListener('click', shareRoom);
+            
+            // Enter key in prompt
+            document.getElementById('aiPrompt').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    generateCode();
+                }
+            });
+        }
+        
+        // AI Functions
+        async function generateCode() {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            if (!prompt) {
+                showToast('Please enter a description', 'warning');
+                return;
+            }
+            
+            showTypingIndicator(true);
+            
+            try {
+                const response = await fetch('/api/ai/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        description: prompt,
+                        language: currentLanguage,
+                        context: {
+                            current_code: editor ? editor.getValue() : ''
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAIResponse(result.content, 'Generated Code', result.provider);
+                    showToast('Code generated successfully!', 'success');
+                } else {
+                    showToast(result.error || 'Failed to generate code', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error generating code:', error);
+                showToast('Error generating code: ' + error.message, 'error');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+        
+        async function analyzeCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue().trim();
+            if (!code) {
+                showToast('No code to analyze', 'warning');
+                return;
+            }
+            
+            showTypingIndicator(true);
+            
+            try {
+                const response = await fetch('/api/ai/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: code,
+                        language: currentLanguage,
+                        analysis_type: 'comprehensive',
+                        include_suggestions: true
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayCodeAnalysis(result.content, result.provider);
+                    showToast('Code analysis completed!', 'success');
+                } else {
+                    showToast(result.error || 'Failed to analyze code', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error analyzing code:', error);
+                showToast('Error analyzing code: ' + error.message, 'error');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+        
+        async function completeCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue();
+            const position = editor.getPosition();
+            
+            // Get code up to cursor position
+            const model = editor.getModel();
+            const codeUpToCursor = model.getValueInRange({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+            });
+            
+            if (!codeUpToCursor.trim()) {
+                showToast('No code to complete', 'warning');
+                return;
+            }
+            
+            sendWebSocketMessage('ai_complete', {
+                content: codeUpToCursor,
+                language: currentLanguage
+            });
+        }
+        
+        // Handle AI responses
+        function handleAICompletionResult(data) {
+            showTypingIndicator(false);
+            
+            if (editor && data.content) {
+                const position = editor.getPosition();
+                editor.executeEdits('ai-completion', [{
+                    range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                    text: data.content
+                }]);
+                
+                displayAIResponse(data.content, 'Code Completion', data.provider);
+                showToast('Code completion inserted!', 'success');
+            }
+        }
+        
+        function handleAIAnalysisResult(data) {
+            showTypingIndicator(false);
+            displayCodeAnalysis(data.content, data.provider);
+            showToast('Code analysis completed!', 'success');
+        }
+        
+        // Display functions
+        function displayAIResponse(content, title, provider) {
+            const container = document.getElementById('aiResponse');
+            
+            const responseHtml = `
+                <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-blue-800">${title}</h4>
+                        <span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">${provider}</span>
+                    </div>
+                    <div class="text-sm font-mono bg-gray-100 p-3 rounded overflow-x-auto">
+                        <pre>${content}</pre>
+                    </div>
+                    <div class="flex mt-2 space-x-2">
+                        <button onclick="insertToEditor(this)" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                            Insert to Editor
+                        </button>
+                        <button onclick="copyToClipboard(this)" class="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = responseHtml + container.innerHTML;
+        }
+        
+        function displayCodeAnalysis(content, provider) {
+            const container = document.getElementById('codeAnalysis');
+            
+            const analysisHtml = `
+                <div class="text-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-gray-800">Analysis Results</h4>
+                        <span class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">${provider}</span>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded text-xs">
+                        <pre class="whitespace-pre-wrap">${content}</pre>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = analysisHtml;
+        }
+        
+        // Utility functions
+        function insertToEditor(button) {
+            if (!editor) return;
+            
+            const preElement = button.parentElement.previousElementSibling.querySelector('pre');
+            const content = preElement.textContent;
+            
+            const position = editor.getPosition();
+            editor.executeEdits('insert-ai-content', [{
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                text: '\n' + content + '\n'
+            }]);
+            
+            showToast('Content inserted to editor!', 'success');
+        }
+        
+        function copyToClipboard(button) {
+            const preElement = button.parentElement.previousElementSibling.querySelector('pre');
+            const content = preElement.textContent;
+            
+            navigator.clipboard.writeText(content).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(err => {
+                showToast('Failed to copy to clipboard', 'error');
+            });
+        }
+        
+        function clearAIResponse() {
+            document.getElementById('aiResponse').innerHTML = `
+                <div class="text-gray-500 text-center py-8">
+                    <i class="fas fa-robot text-4xl mb-4"></i>
+                    <p>AI responses will appear here</p>
+                </div>
+            `;
+            document.getElementById('aiPrompt').value = '';
+        }
+        
+        // Code actions
+        function formatCode() {
+            if (editor) {
+                editor.getAction('editor.action.formatDocument').run();
+                showToast('Code formatted!', 'success');
+            }
+        }
+        
+        async function refactorCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue().trim();
+            if (!code) {
+                showToast('No code to refactor', 'warning');
+                return;
+            }
+            
+            showTypingIndicator(true);
+            
+            try {
+                const response = await fetch('/api/ai/refactor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: code,
+                        language: currentLanguage,
+                        instructions: 'Improve code quality, performance, and readability'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAIResponse(result.content, 'Refactored Code', result.provider);
+                    showToast('Code refactoring completed!', 'success');
+                } else {
+                    showToast(result.error || 'Failed to refactor code', 'error');
+                }
+                
+            } catch (error) {
+                showToast('Error refactoring code: ' + error.message, 'error');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+        
+        async function generateDocumentation() {
+            if (!editor) return;
+            
+            const code = editor.getValue().trim();
+            if (!code) {
+                showToast('No code to document', 'warning');
+                return;
+            }
+            
+            showTypingIndicator(true);
+            
+            try {
+                const response = await fetch('/api/ai/document', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: code,
+                        language: currentLanguage,
+                        style: 'comprehensive'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAIResponse(result.content, 'Generated Documentation', result.provider);
+                    showToast('Documentation generated!', 'success');
+                } else {
+                    showToast(result.error || 'Failed to generate documentation', 'error');
+                }
+                
+            } catch (error) {
+                showToast('Error generating documentation: ' + error.message, 'error');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+        
+        async function generateTests() {
+            if (!editor) return;
+            
+            const code = editor.getValue().trim();
+            if (!code) {
+                showToast('No code to test', 'warning');
+                return;
+            }
+            
+            showTypingIndicator(true);
+            
+            try {
+                const response = await fetch('/api/ai/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        description: `Generate comprehensive unit tests for the following ${currentLanguage} code:\n\n${code}`,
+                        language: currentLanguage,
+                        context: {
+                            task: 'test_generation',
+                            original_code: code
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAIResponse(result.content, 'Generated Tests', result.provider);
+                    showToast('Tests generated!', 'success');
+                } else {
+                    showToast(result.error || 'Failed to generate tests', 'error');
+                }
+                
+            } catch (error) {
+                showToast('Error generating tests: ' + error.message, 'error');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+        
+        // File operations
+        function newFile() {
+            if (editor) {
+                editor.setValue('');
+                showToast('New file created!', 'success');
+            }
+        }
+        
+        function saveFile() {
+            if (editor) {
+                const content = editor.getValue();
+                localStorage.setItem('ai_coding_env_file', content);
+                showToast('File saved to browser storage!', 'success');
+            }
+        }
+        
+        function downloadFile() {
+            if (editor) {
+                const content = editor.getValue();
+                const extension = getFileExtension(currentLanguage);
+                const filename = `code_file.${extension}`;
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast(`File downloaded as ${filename}!`, 'success');
+            }
+        }
+        
+        function getFileExtension(language) {
+            const extensions = {
+                'python': 'py',
+                'javascript': 'js',
+                'typescript': 'ts',
+                'java': 'java',
+                'cpp': 'cpp',
+                'go': 'go',
+                'rust': 'rs'
+            };
+            return extensions[language] || 'txt';
+        }
+        
+        // Collaboration functions
+        function joinRoom() {
+            const roomId = document.getElementById('roomInput').value.trim();
+            if (!roomId) {
+                showToast('Please enter a room ID', 'warning');
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                sendWebSocketMessage('join_room', { room_id: roomId });
+            } else {
+                showToast('Not connected to server', 'error');
+            }
+        }
+        
+        function generateRoom() {
+            const roomId = 'room_' + Math.random().toString(36).substr(2, 9);
+            document.getElementById('roomInput').value = roomId;
+            joinRoom();
+        }
+        
+        function shareRoom() {
+            const roomId = document.getElementById('roomInput').value.trim();
+            if (!roomId) {
+                showToast('No room to share', 'warning');
+                return;
+            }
+            
+            const shareUrl = `${window.location.origin}?room=${roomId}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'AI Coding Collaboration Room',
+                    text: 'Join my coding session!',
+                    url: shareUrl
+                });
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    showToast('Room URL copied to clipboard!', 'success');
+                });
+            }
+        }
+        
+        function handleRoomJoined(data) {
+            currentRoom = data.room_id;
+            document.getElementById('collaborationStatus').textContent = 
+                `Connected to room: ${currentRoom}`;
+            showToast(`Joined collaboration room: ${currentRoom}`, 'success');
+        }
+        
+        function handleUserJoined(data) {
+            showToast(`User ${data.user_id} joined the room`, 'info');
+            updateActiveUsers();
+        }
+        
+        function handleUserLeft(data) {
+            showToast(`User ${data.user_id} left the room`, 'info');
+            updateActiveUsers();
+        }
+        
+        function updateActiveUsers() {
+            // This would be implemented with real user tracking
+            // For now, just show a placeholder
+        }
+        
+        function handleCodeUpdate(data) {
+            // Handle real-time code updates from other users
+            if (editor && data.changes) {
+                // Apply changes from other users
+                // This is a simplified implementation
+                console.log('Code update from user:', data.user_id, data.changes);
+            }
+        }
+        
+        function handleCursorUpdate(data) {
+            // Handle cursor position updates from other users
+            console.log('Cursor update from user:', data.user_id, data.position);
+        }
+        
+        // UI helpers
+        function showTypingIndicator(show) {
+            const indicator = document.querySelector('.typing-indicator');
+            if (show) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        }
+        
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            const textElement = document.getElementById('connectionText');
+            
+            statusElement.className = `connection-status ${status}`;
+            
+            switch (status) {
+                case 'connected':
+                    textElement.textContent = 'Connected';
+                    break;
+                case 'connecting':
+                    textElement.textContent = 'Connecting...';
+                    break;
+                case 'disconnected':
+                    textElement.textContent = 'Disconnected';
+                    break;
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide and remove toast
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.parentElement.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Check AI providers status
+        async function checkAIProviders() {
+            try {
+                const response = await fetch('/api/ai/health');
+                const result = await response.json();
+                
+                const statusElement = document.getElementById('aiProviderStatus');
+                
+                if (result.status === 'healthy') {
+                    statusElement.innerHTML = '<i class="fas fa-check-circle mr-1"></i>AI Providers Online';
+                    statusElement.className = 'text-xs text-green-200';
+                } else if (result.status === 'degraded') {
+                    statusElement.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Some AI Providers Available';
+                    statusElement.className = 'text-xs text-yellow-200';
+                } else {
+                    statusElement.innerHTML = '<i class="fas fa-times-circle mr-1"></i>AI Providers Offline';
+                    statusElement.className = 'text-xs text-red-200';
+                }
+                
+            } catch (error) {
+                console.error('Error checking AI providers:', error);
+                const statusElement = document.getElementById('aiProviderStatus');
+                statusElement.innerHTML = '<i class="fas fa-times-circle mr-1"></i>AI Status Unknown';
+                statusElement.className = 'text-xs text-red-200';
+            }
+        }
+        
+        // Load saved file on startup
+        window.addEventListener('load', function() {
+            const savedContent = localStorage.getItem('ai_coding_env_file');
+            if (savedContent && editor) {
+                editor.setValue(savedContent);
+            }
+            
+            // Check for room parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                document.getElementById('roomInput').value = roomParam;
+                setTimeout(() => {
+                    joinRoom();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
