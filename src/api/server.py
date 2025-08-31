@@ -24,9 +24,11 @@ import uvicorn
 
 from ..core.config import settings
 from ..core.ai_engine import ai_engine
-from .routes import ai, websocket, auth, health
+from .routes import ai, websocket, auth, health, documents, queries, admin
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.logging import LoggingMiddleware
+from .middleware.auth import AuthMiddleware
+from .middleware.monitoring import MonitoringMiddleware
 
 
 # Configure logging
@@ -104,9 +106,11 @@ def setup_middleware(app: FastAPI):
             allowed_hosts=settings.security.allowed_hosts
         )
     
-    # Custom middleware
+    # Custom middleware (order matters - added in reverse execution order)
+    app.add_middleware(MonitoringMiddleware)  # Last to execute, first to setup
     app.add_middleware(LoggingMiddleware)
-    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(AuthMiddleware)
+    app.add_middleware(RateLimitMiddleware)  # First to execute, last to setup
 
 
 def setup_routes(app: FastAPI):
@@ -135,6 +139,24 @@ def setup_routes(app: FastAPI):
         health.router,
         prefix="/api",
         tags=["health"]
+    )
+    
+    app.include_router(
+        documents.router,
+        prefix="/api/documents",
+        tags=["documents"]
+    )
+    
+    app.include_router(
+        queries.router,
+        prefix="/api/queries", 
+        tags=["queries"]
+    )
+    
+    app.include_router(
+        admin.router,
+        prefix="/api/admin",
+        tags=["admin"]
     )
 
 

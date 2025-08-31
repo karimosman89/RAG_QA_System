@@ -1,0 +1,247 @@
+# ===============================
+# Enterprise RAG Platform Docker Compose
+# Complete stack with all services
+# ===============================
+
+version: '3.8'
+
+services:
+  # Main RAG Platform Application
+  rag-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: rag_platform_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=Enterprise RAG Platform
+      - APP_VERSION=2.0.0
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=4
+      
+      # Security
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      
+      # AI Providers - Set these in .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      
+      # Database
+      - DATABASE_URL=postgresql+asyncpg://rag_user:${POSTGRES_PASSWORD:-rag_password}@postgres:5432/rag_platform
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      
+      # Vector Store
+      - VECTOR_STORE_TYPE=chroma
+      - CHROMA_PERSIST_DIRECTORY=/app/chroma_db
+      
+      # File Upload
+      - MAX_UPLOAD_SIZE_MB=100
+      - UPLOAD_DIRECTORY=/app/static/uploads
+      
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_FILE=/app/logs/rag_platform.log
+      
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./chroma_db:/app/chroma_db
+      - ./static/uploads:/app/static/uploads
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - rag_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rag-platform.rule=Host(`rag.localhost`)"
+      - "traefik.http.routers.rag-platform.entrypoints=web"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rag_platform_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=rag_platform
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rag_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - rag_network
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+
+  # Redis Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: rag_platform_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rag_network
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: rag_platform_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./static:/var/www/static
+    depends_on:
+      - rag-platform
+    networks:
+      - rag_network
+    profiles:
+      - nginx
+
+  # Prometheus Monitoring (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rag_platform_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - rag_network
+    profiles:
+      - monitoring
+
+  # Grafana Dashboards (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rag_platform_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - rag_network
+    profiles:
+      - monitoring
+
+  # Traefik Load Balancer (Optional)
+  traefik:
+    image: traefik:v3.0
+    container_name: rag_platform_traefik
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - rag_network
+    profiles:
+      - traefik
+
+  # Vector Database - Qdrant (Alternative to ChromaDB)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: rag_platform_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - rag_network
+    profiles:
+      - qdrant
+
+  # ElasticSearch for Hybrid Search (Optional)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: rag_platform_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - rag_network
+    profiles:
+      - elasticsearch
+
+# Named Volumes for Data Persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+# Networks
+networks:
+  rag_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,134 @@
+# ===============================
+# Development Docker Compose
+# Simplified stack for local development
+# ===============================
+
+version: '3.8'
+
+services:
+  # Development RAG Platform
+  rag-platform-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: rag_platform_dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "8001:8001"  # Debug port
+    environment:
+      - APP_NAME=RAG Platform (Development)
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - HOST=0.0.0.0
+      - PORT=8000
+      - RELOAD=true
+      
+      # Development Security (less strict)
+      - JWT_SECRET_KEY=dev-secret-key-not-for-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      
+      # AI Provider Keys (from .env)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      
+      # Local Database
+      - DATABASE_URL=sqlite+aiosqlite:///./data/rag_platform_dev.db
+      
+      # Redis
+      - REDIS_URL=redis://redis-dev:6379/0
+      
+      # Vector Store
+      - VECTOR_STORE_TYPE=chroma
+      - CHROMA_PERSIST_DIRECTORY=/app/chroma_db_dev
+      
+      # Logging
+      - LOG_LEVEL=DEBUG
+      
+    volumes:
+      - .:/app  # Mount source code for hot reload
+      - dev_data:/app/data
+      - dev_logs:/app/logs
+      - dev_chroma:/app/chroma_db_dev
+    depends_on:
+      - redis-dev
+    networks:
+      - rag_dev_network
+    command: >
+      uvicorn src.api.server:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir src
+      --log-level debug
+
+  # Redis for Development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: rag_platform_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - rag_dev_network
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for Development (Optional)
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: rag_platform_postgres_dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=rag_platform_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - rag_dev_network
+    profiles:
+      - postgres
+
+  # Jupyter Notebook for Development and Analysis
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: rag_platform_jupyter
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=dev-token
+    volumes:
+      - .:/home/jovyan/rag-platform
+      - jupyter_data:/home/jovyan/work
+    networks:
+      - rag_dev_network
+    profiles:
+      - jupyter
+
+  # Mailhog for Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: rag_platform_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web interface
+    networks:
+      - rag_dev_network
+    profiles:
+      - mailhog
+
+volumes:
+  dev_data:
+  dev_logs:
+  dev_chroma:
+  dev_postgres_data:
+  jupyter_data:
+
+networks:
+  rag_dev_network:
+    driver: bridge

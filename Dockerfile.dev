@@ -1,0 +1,64 @@
+# ===============================
+# Development Dockerfile
+# Optimized for development workflow
+# ===============================
+
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
+
+# Install development tools
+RUN pip install \
+    pytest-xdist \
+    pytest-watch \
+    ipython \
+    jupyter \
+    black \
+    flake8 \
+    mypy \
+    isort \
+    pre-commit
+
+# Create necessary directories
+RUN mkdir -p logs data chroma_db_dev static/uploads
+
+# Copy application code (will be overridden by volume mount)
+COPY . .
+
+# Create development environment file
+RUN echo 'APP_NAME="RAG Platform (Development)"' > .env && \
+    echo 'ENVIRONMENT="development"' >> .env && \
+    echo 'DEBUG=true' >> .env && \
+    echo 'LOG_LEVEL="DEBUG"' >> .env && \
+    echo 'DATABASE_URL="sqlite+aiosqlite:///./data/rag_platform_dev.db"' >> .env && \
+    echo 'REDIS_URL="redis://redis-dev:6379/0"' >> .env
+
+# Expose ports
+EXPOSE 8000 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Default command (can be overridden in docker-compose)
+CMD ["uvicorn", "src.api.server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
