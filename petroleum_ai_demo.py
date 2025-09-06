@@ -111,6 +111,8 @@ class PetroleumAIDemo:
             WellLogData(
                 well_id=self.well_id,
                 log_type=LogType.GAMMA_RAY,
+                depth_start=float(depths[0]),
+                depth_end=float(depths[-1]),
                 depths=depths.tolist(),
                 values=gamma_values,
                 units="API"
@@ -118,6 +120,8 @@ class PetroleumAIDemo:
             WellLogData(
                 well_id=self.well_id,
                 log_type=LogType.RESISTIVITY,
+                depth_start=float(depths[0]),
+                depth_end=float(depths[-1]),
                 depths=depths.tolist(),
                 values=resistivity_values,
                 units="OHMM"
@@ -125,6 +129,8 @@ class PetroleumAIDemo:
             WellLogData(
                 well_id=self.well_id,
                 log_type=LogType.NEUTRON,
+                depth_start=float(depths[0]),
+                depth_end=float(depths[-1]),
                 depths=depths.tolist(),
                 values=neutron_values,
                 units="V/V"
@@ -132,6 +138,8 @@ class PetroleumAIDemo:
             WellLogData(
                 well_id=self.well_id,
                 log_type=LogType.DENSITY,
+                depth_start=float(depths[0]),
+                depth_end=float(depths[-1]),
                 depths=depths.tolist(),
                 values=density_values,
                 units="G/C3"
@@ -139,6 +147,8 @@ class PetroleumAIDemo:
             WellLogData(
                 well_id=self.well_id,
                 log_type=LogType.PHOTOELECTRIC,
+                depth_start=float(depths[0]),
+                depth_end=float(depths[-1]),
                 depths=depths.tolist(),
                 values=pe_values,
                 units="B/E"
@@ -153,13 +163,11 @@ class PetroleumAIDemo:
             weight_on_bit=28.5,
             rotary_speed=110.0,
             flow_rate=320.0,
-            standpipe_pressure=3180.0,
-            hookload=185000.0,
+            pump_pressure=3180.0,
             torque=12500.0,
             mud_weight=9.2,
+            mud_viscosity=35.0,
             rate_of_penetration=45.5,
-            total_gas=1250.0,
-            pit_volume=892.5,
             mud_temperature=68.5,
             timestamp=datetime.now()
         )
@@ -222,8 +230,11 @@ class PetroleumAIDemo:
         
         print("\n🤖 Running AI Analysis...")
         
+        # Prepare logs data as dictionary
+        logs_dict = {log.log_type: log for log in self.sample_well_logs}
+        
         # Run well log interpretation AI
-        log_results = await well_log_ai(self.sample_well_logs)
+        log_results = well_log_ai.analyze_well_logs(logs_dict)
         
         print("\n📈 ANALYSIS RESULTS:")
         print("-" * 40)
@@ -288,7 +299,7 @@ class PetroleumAIDemo:
         print("\n🤖 Running Risk Analysis...")
         
         # Run drilling risk prediction AI
-        risk_results = await drilling_risk_ai(params)
+        risk_results = await drilling_risk_ai.assess_comprehensive_risk(params)
         
         print("\n🚨 RISK ASSESSMENT RESULTS:")
         print("-" * 40)

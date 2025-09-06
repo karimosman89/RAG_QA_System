@@ -1,0 +1,10 @@
+{
+  "demo_info": {
+    "well_id": "DEMO_WELL_001",
+    "field_name": "Eagle Ford Shale",
+    "operator": "Demo Oil Company",
+    "demo_timestamp": "2025-09-06T21:54:08.905316",
+    "platform_version": "1.0.0"
+  },
+  "error": "'list' object has no attribute 'get'"
+}

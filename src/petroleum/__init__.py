@@ -9,18 +9,32 @@ Specialized AI modules for Oil & Gas operations:
 """
 
 from .well_logs import (
-    WellLogInterpreter,
     LogAnalysisEngine,
     LithologyClassifier,
     FluidContactDetector,
+    LogQualityAnalyzer,
+    InterpretationMethod,
+    LogQuality,
+    InterpretationResult,
     well_log_ai,
+    lithology_classifier,
+    fluid_contact_detector,
 )
 
 from .drilling_risk import (
     DrillingRiskPredictor,
     RealTimeRiskMonitor,
-    HazardDetector,
+    KickDetectionSystem,
+    LostCirculationPredictor,
+    DrillingDysfunctionDetector,
+    AlertSeverity,
+    RiskCategory,
+    RiskAlert,
+    RiskAssessment,
     drilling_risk_ai,
+    real_time_monitor,
+    kick_detector,
+    loss_predictor,
 )
 
 from .reservoir_navigation import (
@@ -42,22 +56,40 @@ from .data_models import (
     DrillingParameters,
     ReservoirModel,
     GeologicalFormation,
-    PetroleumDataProcessor,
+    LogType,
+    LithologyType,
+    FluidType,
+    DrillingHazard,
+    RiskLevel,
 )
 
 __all__ = [
     # Well Log Analysis
-    "WellLogInterpreter",
     "LogAnalysisEngine", 
     "LithologyClassifier",
     "FluidContactDetector",
+    "LogQualityAnalyzer",
+    "InterpretationMethod",
+    "LogQuality",
+    "InterpretationResult",
     "well_log_ai",
+    "lithology_classifier",
+    "fluid_contact_detector",
     
     # Drilling Risk
     "DrillingRiskPredictor",
-    "RealTimeRiskMonitor",
-    "HazardDetector",
+    "RealTimeRiskMonitor", 
+    "KickDetectionSystem",
+    "LostCirculationPredictor",
+    "DrillingDysfunctionDetector",
+    "AlertSeverity",
+    "RiskCategory",
+    "RiskAlert",
+    "RiskAssessment",
     "drilling_risk_ai",
+    "real_time_monitor",
+    "kick_detector", 
+    "loss_predictor",
     
     # Reservoir Navigation
     "GeoSteeringEngine",
@@ -76,6 +108,10 @@ __all__ = [
     "WellLogData",
     "DrillingParameters",
     "ReservoirModel",
-    "GeologicalFormation", 
-    "PetroleumDataProcessor",
+    "GeologicalFormation",
+    "LogType",
+    "LithologyType", 
+    "FluidType",
+    "DrillingHazard",
+    "RiskLevel",
 ]

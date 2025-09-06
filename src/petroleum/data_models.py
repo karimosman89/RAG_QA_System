@@ -94,7 +94,7 @@ class WellLogData(BaseModel):
     log_type: LogType = Field(..., description="Type of log measurement")
     depth_start: float = Field(..., gt=0, description="Starting depth in feet/meters")
     depth_end: float = Field(..., gt=0, description="Ending depth in feet/meters")
-    depth_unit: str = Field(default="ft", regex="^(ft|m)$", description="Depth unit")
+    depth_unit: str = Field(default="ft", pattern="^(ft|m)$", description="Depth unit")
     
     # Log data arrays
     depths: List[float] = Field(..., min_items=1, description="Depth measurements")
